@@ -10,6 +10,7 @@ import json
 import time
 from twilio.rest import Client
 from dotenv import load_dotenv
+import google.auth.transport.requests
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
 import googleapiclient.errors
@@ -20,7 +21,6 @@ API_VERSION = "v3"
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(DIR, '.env')
-print(dotenv_path)
 load_dotenv(dotenv_path)
 
 CLIENT_SECRETS_FILE = os.getenv('CLIENT_SECRETS_FILE')
@@ -63,14 +63,19 @@ def get_authenticated_service():
     if os.path.exists("CREDENTIALS_PICKLE_FILE"):
         with open("CREDENTIALS_PICKLE_FILE", 'rb') as f:
             credentials = pickle.load(f)
+            # print(getattr(credentials, 'token'))
+            # Refresh token so we don't have to check if it's expired
+            request = google.auth.transport.requests.Request()
+            credentials.refresh(request)
     else:
         flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
+            os.path.join(DIR, CLIENT_SECRETS_FILE),
             SCOPES
         )
         credentials = flow.run_console()
-        with open("CREDENTIALS_PICKLE_FILE", 'wb') as f:
-            pickle.dump(credentials, f)
+
+    with open("CREDENTIALS_PICKLE_FILE", 'wb') as f:
+        pickle.dump(credentials, f)
 
     return googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION,
