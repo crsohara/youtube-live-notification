@@ -60,8 +60,8 @@ def main():
         message()
 
 def get_authenticated_service():
-    if os.path.exists("CREDENTIALS_PICKLE_FILE"):
-        with open("CREDENTIALS_PICKLE_FILE", 'rb') as f:
+    if os.path.exists(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE")):
+        with open(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE"), 'rb') as f:
             credentials = pickle.load(f)
             # print(getattr(credentials, 'token'))
             # Refresh token so we don't have to check if it's expired
@@ -74,7 +74,7 @@ def get_authenticated_service():
         )
         credentials = flow.run_console()
 
-    with open("CREDENTIALS_PICKLE_FILE", 'wb') as f:
+    with open(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE"), 'wb') as f:
         pickle.dump(credentials, f)
 
     return googleapiclient.discovery.build(
