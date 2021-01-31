@@ -15,6 +15,9 @@ import google_auth_oauthlib.flow
 import googleapiclient.discovery
 import googleapiclient.errors
 
+import logging
+from logging.handlers import RotatingFileHandler
+
 SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 API_SERVICE_NAME = "youtube"
 API_VERSION = "v3"
@@ -32,11 +35,25 @@ TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_FROM = os.getenv('TWILIO_FROM')
 TWILIO_TO = os.getenv('TWILIO_TO')
 
-def message() :
+def setupLogger() :
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    f_handler = logging.FileHandler('notification.log')
+    f_handler.setLevel(logging.INFO)
+
+    # Create formatters and add it to handlers
+    f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    f_handler.setFormatter(f_format)
+
+    # Add handlers to the logger
+    logger.addHandler(f_handler)
+    return logger
+
+def message(message) :
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     message = client.messages.create(
         from_ = TWILIO_FROM,
-        body = 'FRANCIS IS LIVE',
+        body = message,
         to = TWILIO_TO
     )
     # print(message.sid)
@@ -56,8 +73,10 @@ def main():
     response = request.execute()
 
     isLive = response['pageInfo']['totalResults']
+    logger.info('isLive:')
+    logger.info(isLive)
     if isLive:
-        message()
+        message('FRANCIS IS LIVE')
 
 def get_authenticated_service():
     if os.path.exists(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE")):
@@ -82,12 +101,15 @@ def get_authenticated_service():
         credentials=credentials
     )
 
-# if __name__ == "__main__":
-#     main()
+logger = setupLogger()
 
 try:
   while True:
     main()
     time.sleep(600) # Sleep for 10 minutes
+except Exception as inst:
+    message('THERE WAS AN ERROR OF SOME SORT...')
+    logger.info('Exception:')
+    logger.info(inst)
 except KeyboardInterrupt:
   print('Exiting')
