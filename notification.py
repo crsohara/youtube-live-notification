@@ -38,15 +38,21 @@ TWILIO_TO = os.getenv('TWILIO_TO')
 def setupLogger() :
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    f_handler = logging.FileHandler('notification.log')
-    f_handler.setLevel(logging.INFO)
+
+    handler = RotatingFileHandler(os.path.join(DIR, 'notification.log'), maxBytes=2000, backupCount=2)
+    handler.setLevel(logging.INFO)
+
+    # f_handler = logging.FileHandler('notification.log')
+    # f_handler.setLevel(logging.INFO)
 
     # Create formatters and add it to handlers
     f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    f_handler.setFormatter(f_format)
+    # f_handler.setFormatter(f_format)
+    handler.setFormatter(f_format)
 
     # Add handlers to the logger
-    logger.addHandler(f_handler)
+    # logger.addHandler(f_handler)
+    logger.addHandler(handler)
     return logger
 
 def message(message) :
