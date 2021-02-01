@@ -112,7 +112,7 @@ logger = setupLogger()
 try:
   while True:
     main()
-    time.sleep(600) # Sleep for 10 minutes
+    time.sleep(1200) # Sleep for 20 minutes
 except Exception as inst:
     message('THERE WAS AN ERROR OF SOME SORT...')
     logger.info('Exception:')
