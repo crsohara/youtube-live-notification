@@ -35,23 +35,19 @@ TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_FROM = os.getenv('TWILIO_FROM')
 TWILIO_TO = os.getenv('TWILIO_TO')
 
+prevStreamId = ''
+
 def setupLogger() :
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
     handler = RotatingFileHandler(os.path.join(DIR, 'notification.log'), maxBytes=2000, backupCount=2)
-    handler.setLevel(logging.INFO)
-
-    # f_handler = logging.FileHandler('notification.log')
-    # f_handler.setLevel(logging.INFO)
 
     # Create formatters and add it to handlers
-    f_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    # f_handler.setFormatter(f_format)
+    f_format = logging.Formatter('%(asctime)s_%(levelname)s_%(message)s')
     handler.setFormatter(f_format)
 
     # Add handlers to the logger
-    # logger.addHandler(f_handler)
     logger.addHandler(handler)
     return logger
 
@@ -62,13 +58,13 @@ def message(message) :
         body = message,
         to = TWILIO_TO
     )
-    # print(message.sid)
 
 def main():
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production.
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
     youtube = get_authenticated_service()
+    # yt 'search' costs 100 units, max 10,000/day
     request = youtube.search().list(
         channelId=CHANNEL_ID,
         eventType="live",
@@ -79,16 +75,20 @@ def main():
     response = request.execute()
 
     isLive = response['pageInfo']['totalResults']
-    logger.info('isLive:')
-    logger.info(isLive)
-    if isLive:
-        message('FRANCIS IS LIVE')
+    items = response['items']
+
+    if isLive and len(items):
+        logger.info(isLive)
+        streamId = items[0]['id']['videoId']
+        if streamId != prevStreamId:
+            logger.info(isLive)
+            prevStreamId = streamId
+            message('FRANCIS IS LIVE')
 
 def get_authenticated_service():
     if os.path.exists(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE")):
         with open(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE"), 'rb') as f:
             credentials = pickle.load(f)
-            # print(getattr(credentials, 'token'))
             # Refresh token so we don't have to check if it's expired
             request = google.auth.transport.requests.Request()
             credentials.refresh(request)
@@ -113,9 +113,8 @@ try:
   while True:
     main()
     time.sleep(1200) # Sleep for 20 minutes
-except Exception as inst:
+except Exception as exc:
     message('THERE WAS AN ERROR OF SOME SORT...')
-    logger.info('Exception:')
-    logger.info(inst)
+    logger.error('EXCEPTION: ' + exc)
 except KeyboardInterrupt:
-  print('Exiting')
+  print('Exiting...')
