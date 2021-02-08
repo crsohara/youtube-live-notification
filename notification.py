@@ -41,7 +41,7 @@ def setupLogger() :
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
-    handler = RotatingFileHandler(os.path.join(DIR, 'notification.log'), maxBytes=2000, backupCount=2)
+    handler = RotatingFileHandler(os.path.join(DIR, 'notification.log'), maxBytes=4096, backupCount=2)
 
     # Create formatters and add it to handlers
     f_format = logging.Formatter('%(asctime)s_%(levelname)s_%(message)s')
@@ -89,6 +89,8 @@ def get_authenticated_service():
     if os.path.exists(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE")):
         with open(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE"), 'rb') as f:
             credentials = pickle.load(f)
+            logger.info(credentials.to_json())
+
             # Refresh token so we don't have to check if it's expired
             request = google.auth.transport.requests.Request()
             credentials.refresh(request)
@@ -108,13 +110,13 @@ def get_authenticated_service():
     )
 
 logger = setupLogger()
-
 try:
   while True:
     main()
+    logger.info('Not live.')
     time.sleep(1200) # Sleep for 20 minutes
 except Exception as exc:
     message('THERE WAS AN ERROR OF SOME SORT...')
-    logger.error('EXCEPTION: ' + exc)
+    logger.error(exc)
 except KeyboardInterrupt:
   print('Exiting...')
