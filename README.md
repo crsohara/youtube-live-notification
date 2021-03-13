@@ -12,3 +12,7 @@ https://developers.google.com/youtube/v3/docs/search/list
   - Create `OAuth client`, the download client secret and place in the project root dir. Rename to `client_secrets.json`
 
 ## Twilio account
+
+
+## TODO
+use OAuth playground? https://stackoverflow.com/questions/19766912/how-do-i-authorise-an-app-web-or-installed-without-user-intervention/19766913#19766913
