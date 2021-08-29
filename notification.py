@@ -8,6 +8,7 @@ import os
 import pickle
 import json
 import time
+import requests
 from twilio.rest import Client
 from dotenv import load_dotenv
 import google.auth.transport.requests
@@ -35,6 +36,9 @@ TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_FROM = os.getenv('TWILIO_FROM')
 TWILIO_TO = os.getenv('TWILIO_TO')
 
+SLACK_WEBHOOK = os.geetenv('SLACK_WEBHOOK')
+
+global prevStreamId
 prevStreamId = ''
 
 def setupLogger() :
@@ -51,7 +55,7 @@ def setupLogger() :
     logger.addHandler(handler)
     return logger
 
-def message(message) :
+def sms(message) :
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     message = client.messages.create(
         from_ = TWILIO_FROM,
@@ -59,37 +63,21 @@ def message(message) :
         to = TWILIO_TO
     )
 
-def main():
-    # Disable OAuthlib's HTTPS verification when running locally.
-    # *DO NOT* leave this option enabled in production.
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-    youtube = get_authenticated_service()
-    # yt 'search' costs 100 units, max 10,000/day
-    request = youtube.search().list(
-        channelId=CHANNEL_ID,
-        eventType="live",
-        type="video",
-        part="snippet"
-    )
+def slack(message):
+    result = requests.post(SLACK_WEBHOOK, json={'text': message})
+    return result
 
-    response = request.execute()
-
-    isLive = response['pageInfo']['totalResults']
-    items = response['items']
-
-    if isLive and len(items):
-        logger.info(isLive)
-        streamId = items[0]['id']['videoId']
-        if streamId != prevStreamId:
-            logger.info(isLive)
-            prevStreamId = streamId
-            message('FRANCIS IS LIVE')
+def notify(message):
+    response = slack(message)
+    if response.status_code == 200:
+        return
+    sms(message)
 
 def get_authenticated_service():
     if os.path.exists(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE")):
         with open(os.path.join(DIR,"CREDENTIALS_PICKLE_FILE"), 'rb') as f:
             credentials = pickle.load(f)
-            logger.info(credentials.to_json())
+            # logger.info(credentials.to_json())
 
             # Refresh token so we don't have to check if it's expired
             request = google.auth.transport.requests.Request()
@@ -109,14 +97,56 @@ def get_authenticated_service():
         credentials=credentials
     )
 
+def notifyTest():
+    print("sending test notification")
+    notify('TEST')
+
+def main():
+    global prevStreamId
+    # Disable OAuthlib's HTTPS verification when running locally.
+    # *DO NOT* leave this option enabled in production.
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+    youtube = get_authenticated_service()
+    # yt 'search' costs 100 units, max 10,000/day
+    request = youtube.search().list(
+        channelId=CHANNEL_ID,
+        eventType="live",
+        type="video",
+        part="snippet"
+    )
+
+    response = request.execute()
+
+    isLive = response['pageInfo']['totalResults']
+    items = response['items']
+
+    if not isLive:
+        # logger.info('Not live.')
+        return
+
+    if not len(items):
+        # logger.info('Not live.')
+        return
+
+    streamId = items[0]['id']['videoId']
+
+    if streamId == prevStreamId:
+        # logger.info('Not live.')
+        return
+
+    prevStreamId = streamId
+    notify('FRANCIS IS LIVE')
+
 logger = setupLogger()
+# notifyTest()
+
 try:
-  while True:
-    main()
-    logger.info('Not live.')
-    time.sleep(1200) # Sleep for 20 minutes
-except Exception as exc:
-    message('THERE WAS AN ERROR OF SOME SORT...')
-    logger.error(exc)
+    while True:
+        try:
+            main()
+        except Exception as exc:
+            notify('yt notification.py Error: ```' + str(exc) + '```')
+            logger.error(exc)
+        time.sleep(1200) # Sleep for 20 minutes
 except KeyboardInterrupt:
-  print('Exiting...')
+    print('Exiting...')
