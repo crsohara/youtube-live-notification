@@ -36,7 +36,7 @@ TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_FROM = os.getenv('TWILIO_FROM')
 TWILIO_TO = os.getenv('TWILIO_TO')
 
-SLACK_WEBHOOK = os.geetenv('SLACK_WEBHOOK')
+SLACK_WEBHOOK = os.getenv('SLACK_WEBHOOK')
 
 global prevStreamId
 prevStreamId = ''
